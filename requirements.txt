@@ -1,0 +1,5 @@
+Click==7.0
+ftputil==3.4
+pycryptodome==3.9.4
+# Editable Git install with no remote (sfdlpy==0.0.1a0)
+-e /home/strflw/code/sfdlpy
