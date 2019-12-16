@@ -3,15 +3,53 @@ import click
 from lib.param_types import FTP_LINK
 from lib.sfdl_file import (SFDLFile, PasswordError, print_section)
 
+class SFDLContext:
+    def __init__(self, file = None):
+        self.__file = file
+
+    def load_from_file(self, file, pw=None, output=None):
+        click.clear()
+        click.echo('Downloading %s to %s' % (file.name, output))
+
+        sfdl = SFDLFile(file, pw=pw)
+        if sfdl.encrypted and not pw:
+            sfdl.password = click.prompt('Password is required', hide_input=True)
+
+        try:
+            print_section('SFDL Info', [
+                ('SFDL Version:', sfdl.version),
+                ('Encrypted:', str(sfdl.encrypted)),
+                ('Description:', sfdl.description),
+                ('Uploader:', sfdl.uploader),
+                ('Download Threads:', sfdl.maxDownloadThreads)
+            ])
+            sfdl.start_download()
+        except PasswordError:
+            click.echo('Wrong Password!', err=True)
+            exit(1)
+
+    def create_file(self, host, user, password, port, path):
+        '''Simple program to create a SFDL File'''
+        click.echo('#################')
+        click.echo('Host: %s' % host)
+        click.echo('User: %s' % user)
+        click.echo('Password: %s' % password)
+        click.echo('Port: %d' % port)
+        click.echo('Path: %s' % path)
+pass_sfdl = click.make_pass_decorator(SFDLContext)
+
+
 @click.group()
-def sfdl():
-    pass
+@click.pass_context
+def sfdl(ctx):
+    ctx.obj = SFDLContext()
 
 @sfdl.command()
 @click.argument('link', type=FTP_LINK)
-def create_from(link):
+@pass_sfdl
+def create_from(sfdl_ctx, link):
     '''Create SFDL File from an FTP Link.'''
-    create(link.hostname, link.username, link.password, link.port, link.path)
+    sfdl_ctx.create(link.hostname, link.username, link.password, link.port, link.path)
 
 @sfdl.command()
 @click.option('--host', prompt='Server', help='The FTP Server to connect to.')
@@ -19,9 +57,10 @@ def create_from(link):
 @click.option('--password', prompt='Password', help='The password to use for FTP Login')
 @click.option('--port', default=21, help='The Port to connect to.')
 @click.option('--path', default='/', help='Which file/dir to download')
-def create_with(host, user, password, port, path):
+@pass_sfdl
+def create_with(sfdl_ctx, host, user, password, port, path):
     '''Create SFDL with passed data'''
-    create(host, user, password, port, path)
+    sfdl_ctx.create(host, user, password, port, path)
 
 
 @sfdl.command()
@@ -35,34 +74,7 @@ def create_with(host, user, password, port, path):
     '-p', '--password', help='Password for decryption.'
 )
 @click.argument('FILE', type=click.File('r'))
-def load(file, output=None, password=None):
+@pass_sfdl
+def load(sfdl_ctx, file, output=None, password=None):
     '''Download a SFDL File.'''
-    click.clear()
-    click.echo('Downloading %s to %s' % (file.name, output))
-
-    sfdl = SFDLFile(file, pw=password)
-    if sfdl.encrypted and not password:
-        sfdl.password = click.prompt('Password is required', hide_input=True)
-
-    try:
-        print_section('SFDL Info', [
-            ('SFDL Version:', sfdl.version),
-            ('Encrypted:', str(sfdl.encrypted)),
-            ('Description:', sfdl.description),
-            ('Uploader:', sfdl.uploader),
-            ('Download Threads:', sfdl.maxDownloadThreads)
-        ])
-        sfdl.start_download()
-    except PasswordError:
-        click.echo('Wrong Password!', err=True)
-        exit(1)
-
-
-def create(host, user, password, port, path):
-    '''Simple program to create a SFDL File'''
-    click.echo('#################')
-    click.echo('Host: %s' % host)
-    click.echo('User: %s' % user)
-    click.echo('Password: %s' % password)
-    click.echo('Port: %d' % port)
-    click.echo('Path: %s' % path)
+    sfdl_ctx.load_from_file(file, pw=password, output=output)
