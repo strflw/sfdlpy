@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import click
-from lib.param_types import FTP_LINK
-from lib.sfdl_file import (SFDLFile, PasswordError, print_section)
+from sfdlpy.lib.param_types import FTP_LINK
+from sfdlpy.lib.sfdl_file import (SFDLFile, PasswordError, print_section)
 
 class SFDLContext:
     def __init__(self, file = None):
@@ -41,17 +41,17 @@ pass_sfdl = click.make_pass_decorator(SFDLContext)
 
 @click.group()
 @click.pass_context
-def sfdl(ctx):
+def main(ctx):
     ctx.obj = SFDLContext()
 
-@sfdl.command()
+@main.command()
 @click.argument('link', type=FTP_LINK)
 @pass_sfdl
 def create_from(sfdl_ctx, link):
     '''Create SFDL File from an FTP Link.'''
     sfdl_ctx.create(link.hostname, link.username, link.password, link.port, link.path)
 
-@sfdl.command()
+@main.command()
 @click.option('--host', prompt='Server', help='The FTP Server to connect to.')
 @click.option('--user', prompt='User', help='The user to use for FTP Login')
 @click.option('--password', prompt='Password', help='The password to use for FTP Login')
@@ -63,7 +63,7 @@ def create_with(sfdl_ctx, host, user, password, port, path):
     sfdl_ctx.create(host, user, password, port, path)
 
 
-@sfdl.command()
+@main.command()
 @click.option(
     '-o', '--output',
     type=click.Path(exists=True, file_okay=False, writable=True, resolve_path=True),
