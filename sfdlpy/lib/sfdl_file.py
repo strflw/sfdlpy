@@ -9,6 +9,8 @@ import ftputil.session
 from click import HelpFormatter
 from Crypto.Cipher import AES
 
+from sfdlpy.lib.sfdl_utils import (SFDLUtils, PasswordError)
+
 formatter = HelpFormatter(indent_increment=4, max_width=120)
 
 def print_section(name, values):
@@ -28,37 +30,6 @@ ENCRYPTED_ELEMENTS = [
     'BulkFolderPath',
     'PackageName'
 ]
-
-class PasswordError(Exception):
-    pass
-
-class SFDLUtils:
-    def getElementValue(root, name, password = False):
-        '''Get an elements value, decrypt if needed'''
-        value = SFDLUtils.getElement(root, name).childNodes[0].nodeValue
-        if name in ENCRYPTED_ELEMENTS and password:
-            value = SFDLUtils.decrypt(value, password)
-        if value.lower() == 'true': value = True
-        elif value.lower() == 'false': value = False
-        return value
-
-    def getElement(root, name):
-        '''Get an Element by name from the root element'''
-        return root.getElementsByTagName(name)[0]
-
-    def decrypt(crypted, password):
-        '''Decrypt AES-128-CBC encrypted values'''
-        from Crypto.Util.Padding import unpad
-        iv = crypted[:16].encode()
-        key = hashlib.md5(password.encode()).digest()
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-
-        try:
-            decoded = base64.b64decode(crypted)
-            decrypted = unpad(cipher.decrypt(decoded), AES.block_size)
-        except ValueError:
-            raise PasswordError
-        return decrypted[16:len(decrypted)].decode()
 
 class SFDLFile():
     def __init__(self, file, pw=None):
