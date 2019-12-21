@@ -1,4 +1,5 @@
 # sfdlpy
+## !!! STILL IN DEVELOPMENT !!!
 [![Run on Repl.it](https://repl.it/badge/github/strflw/sfdlpy)](https://repl.it/github/strflw/sfdlpy)
 
 A CLI Tool to handle [SFDL Files](https://sfdl.net/). It can create them and read them to download the provided files.
