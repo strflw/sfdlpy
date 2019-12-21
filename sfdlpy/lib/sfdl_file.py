@@ -1,3 +1,4 @@
+import time
 import base64
 import hashlib
 import xml.dom.minidom
@@ -131,7 +132,9 @@ class SFDLFile():
         with ftputil.FTPHost(host, user, pw, session_factory=session) as ftp:
             click.echo('DONE!')
             path = self.__getElementValue('DefaultPath', root=root)
-            dl_dir(ftp, path)
+            start = time.time()
+            size = dl_dir(ftp, path)
+            click.echo(get_speedreport(time.time() - start, ))
 
     def __getElementValue(self, name, root=None):
         return SFDLUtils.getElementValue(
@@ -141,36 +144,44 @@ class SFDLFile():
 
 import os
 def dl_dir(ftp, path):
+    size = 0
     click.echo('CHDIR %s' % path)
     ftp.chdir(path)
     names = ftp.listdir(ftp.curdir)
     for name in names:
         if ftp.path.isfile(name):
-            dl_file(ftp, name)
+           size += dl_file(ftp, name)
         elif ftp.path.isdir(name):
             try: os.mkdir(name)
             except FileExistsError: pass
             os.chdir(name)
-            dl_dir(ftp, '/'.join([path, name]))
+            size += dl_dir(ftp, '/'.join([path, name]))
+    return size
 
 def dl_file(ftp, name):
     done = 0
     size = ftp.lstat(name).st_size
+    start = time.time()
+    laptime = 0
 
-    def show_it(bla):
-        return 'bla: %i' % done
+    def show_item(bla):
+        nonlocal laptime
+        diff = laptime - start
+        return 'Speed: %s' % SFDLUtils.get_dl_speed(diff, done)
 
-    def gen_cb(bar):
-        def cb(data):
-            nonlocal done
+    def download_cb_maker(bar):
+        def download_cb(data):
+            nonlocal done, laptime
+            laptime = time.time()
             size = len(data)
             done += size
             bar.update(size)
-        return cb
+        return download_cb
 
-
-    with click.progressbar(length=size, show_pos=True, item_show_func=show_it) as bar:
-        ftp.download(name, name, gen_cb(bar))
+    label = click.style('Loading %s:' % name, bg='black', fg='green', blink=True)
+    with click.progressbar(label=label, length=size, show_pos=True, item_show_func=show_item) as bar:
+        ftp.download(name, name, download_cb_maker(bar))
+    return done
 
 import platform
 import subprocess
