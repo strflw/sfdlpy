@@ -1,36 +1,17 @@
+import os
 import time
-import base64
-import hashlib
+import platform
+import subprocess
 import xml.dom.minidom
 
 import click
 import ftplib
 import ftputil
 import ftputil.session
-from click import HelpFormatter
-from Crypto.Cipher import AES
 
-from sfdlpy.lib.sfdl_utils import (SFDLUtils, PasswordError)
+from sfdlpy.lib.sfdl_utils import SFDLUtils
+from sfdlpy.lib.print import print_section
 
-formatter = HelpFormatter(indent_increment=4, max_width=120)
-
-def print_section(name, values):
-    with formatter.section(name=click.style(name, bold=True, underline=True)):
-        formatter.write_dl(values)
-        click.echo(formatter.getvalue())
-        formatter.buffer = []
-
-ENCRYPTED_ELEMENTS = [
-    'Description',
-    'Uploader',
-    'Host',
-    'Username',
-    'Password',
-    'DefaultPath',
-    'Packagename',
-    'BulkFolderPath',
-    'PackageName'
-]
 
 class SFDLFile():
     def __init__(self, file, pw=None):
@@ -58,15 +39,16 @@ class SFDLFile():
     @property
     def version(self):
         '''The SFDL File Version'''
-        if self.__version != None:
+        if self.__version is not None:
             return self.__version
-        self.__version = SFDLUtils.getElementValue(self.__root, 'SFDLFileVersion')
+        self.__version = SFDLUtils.getElementValue(
+            self.__root, 'SFDLFileVersion')
         return self.__version
 
     @property
     def encrypted(self):
         '''Encryption status of the SFDL File'''
-        if self.__encrypted != None:
+        if self.__encrypted is not None:
             return self.__encrypted
         self.__encrypted = SFDLUtils.getElementValue(self.__root, 'Encrypted')
         return self.__encrypted
@@ -74,7 +56,7 @@ class SFDLFile():
     @property
     def description(self):
         '''Description of the SFDL File'''
-        if self.__description != None:
+        if self.__description is not None:
             return self.__description
         self.__description = SFDLUtils.getElementValue(
             self.__root, 'Description', self.__password
@@ -84,7 +66,7 @@ class SFDLFile():
     @property
     def uploader(self):
         '''Uploader of the SFDL File'''
-        if self.__uploader != None:
+        if self.__uploader is not None:
             return self.__uploader
         self.__uploader = SFDLUtils.getElementValue(
             self.__root, 'Uploader', self.__password
@@ -94,7 +76,7 @@ class SFDLFile():
     @property
     def maxDownloadThreads(self):
         '''How many Threads can we use to download'''
-        if self.__maxDownloadThreads != None:
+        if self.__maxDownloadThreads is not None:
             return self.__maxDownloadThreads
         self.__maxDownloadThreads = SFDLUtils.getElementValue(
             self.__root, 'MaxDownloadThreads'
@@ -106,11 +88,8 @@ class SFDLFile():
         root = SFDLUtils.getElement(self.__root, 'ConnectionInfo')
         host = self.__getElementValue('Host', root=root)
         port = self.__getElementValue('Port', root=root)
-        auth_required = self.__getElementValue('AuthRequired', root=root)
-
-        #if auth_required:
         user = self.__getElementValue('Username', root=root)
-        pw   = self.__getElementValue('Password', root=root)
+        pw = self.__getElementValue('Password', root=root)
 
         print_section('FTP Info', [
             ('Host:', host),
@@ -134,7 +113,7 @@ class SFDLFile():
             path = self.__getElementValue('DefaultPath', root=root)
             start = time.time()
             size = dl_dir(ftp, path)
-            click.echo(get_speedreport(time.time() - start, ))
+            click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
 
     def __getElementValue(self, name, root=None):
         return SFDLUtils.getElementValue(
@@ -142,7 +121,7 @@ class SFDLFile():
             name, self.__password
         )
 
-import os
+
 def dl_dir(ftp, path):
     size = 0
     click.echo('CHDIR %s' % path)
@@ -150,13 +129,16 @@ def dl_dir(ftp, path):
     names = ftp.listdir(ftp.curdir)
     for name in names:
         if ftp.path.isfile(name):
-           size += dl_file(ftp, name)
+            size += dl_file(ftp, name)
         elif ftp.path.isdir(name):
-            try: os.mkdir(name)
-            except FileExistsError: pass
+            try:
+                os.mkdir(name)
+            except FileExistsError:
+                pass
             os.chdir(name)
             size += dl_dir(ftp, '/'.join([path, name]))
     return size
+
 
 def dl_file(ftp, name):
     done = 0
@@ -178,24 +160,26 @@ def dl_file(ftp, name):
             bar.update(size)
         return download_cb
 
-    label = click.style('Loading %s:' % name, bg='black', fg='green', blink=True)
-    with click.progressbar(label=label, length=size, show_pos=True, item_show_func=show_item) as bar:
+    label = click.style('Loading %s:' % name,
+                        bg='black', fg='green', blink=True)
+    with click.progressbar(label=label, length=size,
+                           show_pos=True, item_show_func=show_item) as bar:
         ftp.download(name, name, download_cb_maker(bar))
     return done
 
-import platform
-import subprocess
+
 def ping(host):
     param = '-n' if platform.system().lower() == 'windows' else '-c'
     command = ['ping', param, '1', host]
     result = subprocess.run(command, capture_output=True)
     return result.returncode == 0
 
+
 class SFDLConnectionInfo:
     def __init__(self, xmlElement):
         self.__root = xmlElement
 
-        self.host = None #self.__getElementValue('Host')
+        self.host = None  # self.__getElementValue('Host')
         self.port = None
         self.username = None
         self.password = None
@@ -209,6 +193,7 @@ class SFDLConnectionInfo:
         self.forceSingleConnection = None
         self.dataStaleDetection = None
         self.specialServerMode = None
+
 
 class SFDLPackage:
     pass

@@ -1,6 +1,9 @@
 import click
 
-from sfdlpy.lib.sfdl_file import (SFDLFile, PasswordError, print_section)
+from sfdlpy.lib.print import print_section
+from sfdlpy.lib.sfdl_file import SFDLFile
+from sfdlpy.lib.sfdl_utils import PasswordError
+
 
 class SFDLPYApp:
     def __init__(self, file=None, output='.'):
@@ -13,7 +16,8 @@ class SFDLPYApp:
 
         sfdl = SFDLFile(file, pw=pw)
         if sfdl.encrypted and not pw:
-            sfdl.password = click.prompt('Password is required', hide_input=True)
+            sfdl.password = click.prompt('Password is required',
+                                         hide_input=True)
 
         try:
             print_section('SFDL Info', [
@@ -36,4 +40,6 @@ class SFDLPYApp:
         click.echo('Password: %s' % password)
         click.echo('Port: %d' % port)
         click.echo('Path: %s' % path)
+
+
 pass_app = click.make_pass_decorator(SFDLPYApp)

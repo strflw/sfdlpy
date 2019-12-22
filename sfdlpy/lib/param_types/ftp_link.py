@@ -2,6 +2,7 @@ from urllib.parse import urlparse as parse
 
 from click import ParamType
 
+
 class FTPLinkParamType(ParamType):
     name = 'ftp_link'
 
@@ -9,7 +10,7 @@ class FTPLinkParamType(ParamType):
         parsed_url = parse(value)
         try:
             if parsed_url.scheme == 'ftp':
-                if parsed_url.port == None:
+                if parsed_url.port is None:
                     netloc = parsed_url.netloc
                     if (not netloc.endswith(':')):
                         netloc += ':'
@@ -20,4 +21,6 @@ class FTPLinkParamType(ParamType):
         except ValueError as e:
             print(e)
             self.fail("Port out of Range 0-65535: %s" % value, param, ctx)
+
+
 FTP_LINK = FTPLinkParamType()
