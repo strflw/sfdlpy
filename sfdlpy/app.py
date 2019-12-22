@@ -1,8 +1,8 @@
 import click
 
-from sfdlpy.lib.print import print_section
-from sfdlpy.lib.sfdl_file import SFDLFile
-from sfdlpy.lib.sfdl_utils import PasswordError
+from sfdlpy.xml import SFDLFile
+from sfdlpy.utils import print_section
+from sfdlpy.sfdl_utils import PasswordError
 
 
 class SFDLPYApp:

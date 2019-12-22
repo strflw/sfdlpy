@@ -19,3 +19,20 @@ def echo(v, debug=False):
 
 def __flush(formatter=formatter):
     formatter.buffer = []
+
+
+def get_dl_speed(time, size):  # size in bytes plz
+    unit = 'B'
+    if size >= 1024:
+        unit = 'kB'
+        size = size / 1024
+        if size >= 1024:
+            unit = 'mB'
+            size = size / 1024
+    speed = round(size / time)
+    return '%i%s/s' % (speed, unit)
+
+
+def get_speedreport(time, size):  # size in bytes plz
+    speed = get_dl_speed(time, size)
+    return 'Loaded %ibytes in %is. Speed: %s' % (size, time, speed)

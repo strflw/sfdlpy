@@ -16,20 +16,15 @@ ENCRYPTED_ELEMENTS = [
 ]
 
 
-class PasswordError(Exception):
-    pass
-
-
-class SFDLUtils:
+class PasswordError(Exception): pass  # noqa: E701
+class SFDLUtils:  # noqa: E302
     def getElementValue(root, name, password=False):
         '''Get an elements value, decrypt if needed'''
         value = SFDLUtils.getElement(root, name).childNodes[0].nodeValue
         if name in ENCRYPTED_ELEMENTS and password:
             value = SFDLUtils.decrypt(value, password)
-        if value.lower() == 'true':
-            value = True
-        elif value.lower() == 'false':
-            value = False
+        if (vl := value.lower()) == 'true' or vl == 'false':
+            return value.lower() == 'true'
         return value
 
     def getElement(root, name):
@@ -49,18 +44,3 @@ class SFDLUtils:
         except ValueError:
             raise PasswordError
         return decrypted[16:len(decrypted)].decode()
-
-    def get_dl_speed(time, size):  # size in bytes plz
-        unit = 'B'
-        if size >= 1024:
-            unit = 'kB'
-            size = size / 1024
-            if size >= 1024:
-                unit = 'mB'
-                size = size / 1024
-        speed = round(size / time)
-        return '%i%s/s' % (speed, unit)
-
-    def get_speedreport(time, size):  # size in bytes plz
-        speed = SFDLUtils.get_dl_speed(time, size)
-        return 'Loaded %ibytes in %is. Speed: %s' % (size, time, speed)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import click
-from sfdlpy.lib.param_types.ftp_link import FTP_LINK
-from sfdlpy.lib.app import (SFDLPYApp, pass_app)
+from sfdlpy.param_types import FTP_LINK
+from sfdlpy.app import (SFDLPYApp, pass_app)
 
 
 @click.group()

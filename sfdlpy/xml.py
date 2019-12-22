@@ -1,16 +1,11 @@
-import os
 import time
-import platform
-import subprocess
 import xml.dom.minidom
 
 import click
-import ftplib
-import ftputil
-import ftputil.session
 
-from sfdlpy.lib.sfdl_utils import SFDLUtils
-from sfdlpy.lib.print import print_section
+from sfdlpy.ftp import (FTP, PingError)
+from sfdlpy.utils import print_section
+from sfdlpy.sfdl_utils import SFDLUtils
 
 
 class SFDLFile():
@@ -98,81 +93,23 @@ class SFDLFile():
             ('Password:', pw)
         ])
 
-        # connect
-        click.echo('*knockknock*')
-        if not ping(host):
+        try:
+            ftp = FTP(host, username=user, password=pw, port=port)
+            click.echo('Connected!')
+        except PingError:  # FTP.PingError:
             click.echo('No Response! Server offline?')
             exit(2)
-        click.echo('Got Response! Connecting...')
-        session = ftputil.session.session_factory(
-            base_class=ftplib.FTP,
-            port=int(port)
-        )
-        with ftputil.FTPHost(host, user, pw, session_factory=session) as ftp:
-            click.echo('DONE!')
-            path = self.__getElementValue('DefaultPath', root=root)
-            start = time.time()
-            size = dl_dir(ftp, path)
-            click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
+
+        path = self.__getElementValue('DefaultPath', root=root)
+        start = time.time()
+        size = ftp.download_dir(path)
+        click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
 
     def __getElementValue(self, name, root=None):
         return SFDLUtils.getElementValue(
             root or self.__root,
             name, self.__password
         )
-
-
-def dl_dir(ftp, path):
-    size = 0
-    click.echo('CHDIR %s' % path)
-    ftp.chdir(path)
-    names = ftp.listdir(ftp.curdir)
-    for name in names:
-        if ftp.path.isfile(name):
-            size += dl_file(ftp, name)
-        elif ftp.path.isdir(name):
-            try:
-                os.mkdir(name)
-            except FileExistsError:
-                pass
-            os.chdir(name)
-            size += dl_dir(ftp, '/'.join([path, name]))
-    return size
-
-
-def dl_file(ftp, name):
-    done = 0
-    size = ftp.lstat(name).st_size
-    start = time.time()
-    laptime = 0
-
-    def show_item(bla):
-        nonlocal laptime
-        diff = laptime - start
-        return 'Speed: %s' % SFDLUtils.get_dl_speed(diff, done)
-
-    def download_cb_maker(bar):
-        def download_cb(data):
-            nonlocal done, laptime
-            laptime = time.time()
-            size = len(data)
-            done += size
-            bar.update(size)
-        return download_cb
-
-    label = click.style('Loading %s:' % name,
-                        bg='black', fg='green', blink=True)
-    with click.progressbar(label=label, length=size,
-                           show_pos=True, item_show_func=show_item) as bar:
-        ftp.download(name, name, download_cb_maker(bar))
-    return done
-
-
-def ping(host):
-    param = '-n' if platform.system().lower() == 'windows' else '-c'
-    command = ['ping', param, '1', host]
-    result = subprocess.run(command, capture_output=True)
-    return result.returncode == 0
 
 
 class SFDLConnectionInfo:
