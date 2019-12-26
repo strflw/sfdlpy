@@ -11,18 +11,16 @@ class SFDLFile():
     def __init__(self, file, pw=None):
         self.dom = xml.dom.minidom.parse(file)
         self.__root = self.dom.getElementsByTagName('SFDLFile')[0]
-
         self.__password = pw
 
-        self.__version = None
-        self.__encrypted = None
-        self.__description = None
-        self.__uploader = None
-        self.__maxDownloadThreads = None
+        self.version = self.__getElementValue('SFDLFileVersion')
+        self.encrypted = self.__getElementValue('Encrypted')
+        self.description = self.__getElementValue('Description')
+        self.uploader = self.__getElementValue('Uploader')
+        self.maxDownloadThreads = self.__getElementValue('MaxDownloadThreads')
 
-        self.__connectionInfo = None
-        self.__packages = []
-        pass
+        self.connection_info = SFDLConnectionInfo(self.__root)
+        self.packages = []
 
     def __setattr__(self, name, value):
         if name == 'password':
@@ -30,61 +28,7 @@ class SFDLFile():
         else:
             super(SFDLFile, self).__setattr__(name, value)
 
-    @property
-    def version(self):
-        '''The SFDL File Version'''
-        if self.__version is not None:
-            return self.__version
-        self.__version = SFDLUtils.getElementValue(
-            self.__root, 'SFDLFileVersion')
-        return self.__version
-
-    @property
-    def encrypted(self):
-        '''Encryption status of the SFDL File'''
-        if self.__encrypted is not None:
-            return self.__encrypted
-        self.__encrypted = SFDLUtils.getElementValue(self.__root, 'Encrypted')
-        return self.__encrypted
-
-    @property
-    def description(self):
-        '''Description of the SFDL File'''
-        if self.__description is not None:
-            return self.__description
-        self.__description = SFDLUtils.getElementValue(
-            self.__root, 'Description', self.__password
-        )
-        return self.__description
-
-    @property
-    def uploader(self):
-        '''Uploader of the SFDL File'''
-        if self.__uploader is not None:
-            return self.__uploader
-        self.__uploader = SFDLUtils.getElementValue(
-            self.__root, 'Uploader', self.__password
-        )
-        return self.__uploader
-
-    @property
-    def maxDownloadThreads(self):
-        '''How many Threads can we use to download'''
-        if self.__maxDownloadThreads is not None:
-            return self.__maxDownloadThreads
-        self.__maxDownloadThreads = SFDLUtils.getElementValue(
-            self.__root, 'MaxDownloadThreads'
-        )
-        return self.__maxDownloadThreads
-
     def start_download(self):
-        # get connection info
-        root = SFDLUtils.getElement(self.__root, 'ConnectionInfo')
-        host = self.__getElementValue('Host', root=root)
-        port = self.__getElementValue('Port', root=root)
-        user = self.__getElementValue('Username', root=root)
-        pw = self.__getElementValue('Password', root=root)
-
         try:
             blink_host = click.style(self.connection_info.host, blink=True)
             echo('Connecting to %s\r' % blink_host)
@@ -113,23 +57,35 @@ class SFDLFile():
 
 
 class SFDLConnectionInfo:
-    def __init__(self, xmlElement):
-        self.__root = xmlElement
+    def __init__(self, xmlElement, xmlPassword=None):
+        self.__root = SFDLUtils.getElement(xmlElement, 'ConnectionInfo')
+        self.__xmlPassword = xmlPassword
 
-        self.host = None  # self.__getElementValue('Host')
-        self.port = None
-        self.username = None
-        self.password = None
-        self.authRequired = None
-        self.dataConnectionType = None
-        self.dataType = None
-        self.characterEncoding = None
-        self.encryptionMode = None
-        self.listMethod = None
-        self.defaultPath = None
-        self.forceSingleConnection = None
-        self.dataStaleDetection = None
-        self.specialServerMode = None
+        self.host = self.__getElementValue('Host')
+        self.port = self.__getElementValue('Port')
+        self.path = self.__getElementValue('Path')
+        self.username = self.__getElementValue('Username')
+        self.password = self.__getElementValue('Password')
+        self.dataType = self.__getElementValue('DataType')
+        self.listMethod = self.__getElementValue('ListMethod')
+        self.authRequired = self.__getElementValue('AuthRequired')
+        self.encryptionMode = self.__getElementValue('EncryptionMode')
+        self.characterEncoding = self.__getElementValue('CharacterEncoding')
+        self.dataConnectionType = self.__getElementValue('DataConnectionType')
+
+    def __str__(self):
+        return 'ftp://%s:%s@%s:%s%s' % (
+            self.username,
+            self.password,
+            self.host,
+            self.port,
+            self.path
+        )
+
+    def __getElementValue(self, name):
+        return SFDLUtils.getElementValue(
+            self.__root, name, self.__xmlPassword
+        )
 
 
 class SFDLPackage:

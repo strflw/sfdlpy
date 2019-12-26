@@ -10,13 +10,11 @@ class FTPLinkParamType(ParamType):
         parsed_url = parse(value)
         try:
             if parsed_url.scheme == 'ftp':
-                if parsed_url.port is None:
-                    netloc = parsed_url.netloc
-                    if (not netloc.endswith(':')):
-                        netloc += ':'
-                    netloc += '21'
-                    parsed_url = parsed_url._replace(netloc=netloc)
-                return parsed_url
+                if parsed_url.port is not None:
+                    return parsed_url
+                netloc = parsed_url.netloc
+                netloc += ':21' if (not netloc.endswith(':')) else '21'
+                return parsed_url._replace(netloc=netloc)
             self.fail("Expected valid FTP Link, got: " f"{value}", param, ctx)
         except ValueError as e:
             print(e)

@@ -20,7 +20,10 @@ class PasswordError(Exception): pass  # noqa: E701
 class SFDLUtils:  # noqa: E302
     def getElementValue(root, name, password=False):
         '''Get an elements value, decrypt if needed'''
-        value = SFDLUtils.getElement(root, name).childNodes[0].nodeValue
+        try:
+            value = SFDLUtils.getElement(root, name).childNodes[0].nodeValue
+        except IndexError:
+            return None
         if name in ENCRYPTED_ELEMENTS and password:
             value = SFDLUtils.decrypt(value, password)
         if (vl := value.lower()) == 'true' or vl == 'false':

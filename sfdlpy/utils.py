@@ -14,9 +14,15 @@ def echo(v, debug=False):
     if debug:
         print(v)
     else:
-        click.echo(click.style(
-            v, fg='green', bg='black'
-        ))
+        click.echo(style(v, fg='green', bg='black'))
+
+
+def style(v, **kwargs):
+    if kwargs.get('fg') is None:
+        kwargs['fg'] = 'green'
+    if kwargs.get('bg') is None:
+        kwargs['bg'] = 'black'
+    return click.style(v, **kwargs)
 
 
 def __flush(formatter=formatter):
