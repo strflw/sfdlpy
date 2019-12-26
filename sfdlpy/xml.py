@@ -1,10 +1,9 @@
-import time
 import xml.dom.minidom
 
 import click
 
 from sfdlpy.ftp import (FTP, PingError)
-from sfdlpy.utils import print_section
+from sfdlpy.utils import echo
 from sfdlpy.sfdl_utils import SFDLUtils
 
 
@@ -86,24 +85,25 @@ class SFDLFile():
         user = self.__getElementValue('Username', root=root)
         pw = self.__getElementValue('Password', root=root)
 
-        print_section('FTP Info', [
-            ('Host:', host),
-            ('Port:', port),
-            ('User:', user),
-            ('Password:', pw)
-        ])
-
         try:
-            ftp = FTP(host, username=user, password=pw, port=port)
-            click.echo('Connected!')
-        except PingError:  # FTP.PingError:
-            click.echo('No Response! Server offline?')
+            blink_host = click.style(self.connection_info.host, blink=True)
+            echo('Connecting to %s\r' % blink_host)
+
+            ftp = FTP(
+                self.connection_info.host,
+                username=self.connection_info.username,
+                password=self.connection_info.password,
+                port=self.connection_info.port
+            )
+            echo('Connected!')
+        except PingError:
+            echo('No Response! Server offline?')
             exit(2)
 
-        path = self.__getElementValue('DefaultPath', root=root)
-        start = time.time()
-        size = ftp.download_dir(path)
-        click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
+        # for package in self.packages:
+        #     start = time.time()
+        #     size = ftp.download_dir(package.path)
+        #     click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
 
     def __getElementValue(self, name, root=None):
         return SFDLUtils.getElementValue(

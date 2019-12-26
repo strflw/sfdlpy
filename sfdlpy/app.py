@@ -1,7 +1,7 @@
 import click
 
 from sfdlpy.xml import SFDLFile
-from sfdlpy.utils import print_section
+from sfdlpy.utils import echo
 from sfdlpy.sfdl_utils import PasswordError
 
 
@@ -12,7 +12,6 @@ class SFDLPYApp:
 
     def load_from_file(self, file, pw=None, output=None):
         click.clear()
-        click.echo('Downloading %s to %s' % (file.name, output))
 
         sfdl = SFDLFile(file, pw=pw)
         if sfdl.encrypted and not pw:
@@ -20,13 +19,8 @@ class SFDLPYApp:
                                          hide_input=True)
 
         try:
-            print_section('SFDL Info', [
-                ('SFDL Version:', sfdl.version),
-                ('Encrypted:', str(sfdl.encrypted)),
-                ('Description:', sfdl.description),
-                ('Uploader:', sfdl.uploader),
-                ('Download Threads:', sfdl.maxDownloadThreads)
-            ])
+            echo('Loaded SFDL File %s Version %s' % (sfdl.version, file.name))
+            echo('%s by %s' % (sfdl.description, sfdl.uploader))
             sfdl.start_download()
         except PasswordError:
             click.echo('Wrong Password!', err=True)

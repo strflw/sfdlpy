@@ -14,7 +14,9 @@ def echo(v, debug=False):
     if debug:
         print(v)
     else:
-        click.echo(v)
+        click.echo(click.style(
+            v, fg='green', bg='black'
+        ))
 
 
 def __flush(formatter=formatter):
