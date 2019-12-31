@@ -1,36 +1,98 @@
-import xml.dom.minidom
+import base64
+import hashlib
+import xml.etree.ElementTree as ET
 
 import click
 
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+
 from sfdlpy.ftp import (FTP, PingError)
 from sfdlpy.utils import (echo, style)
-from sfdlpy.sfdl_utils import SFDLUtils
-
 from sfdlpy.geodata import get_iso_code
 
 
-class SFDLFile():
+ENCRYPTED_ELEMENTS = [
+    'Description',
+    'Uploader',
+    'Host',
+    'Username',
+    'Password',
+    'DefaultPath',
+    'Path',
+    'Packagename',
+    'BulkFolderPath',
+    'PackageName'
+]
+
+
+class ElementNotFound(Exception): pass  # noqa: E701
+class PasswordError(Exception): pass  # noqa: E701
+class SFDLXML():
+    def __init__(self, el, pw):
+        self._root = el
+        self._password = pw
+
+    def _getElementValue(self, name):
+        '''Get an elements value, decrypt if needed'''
+        value = self._getElement(name).text
+        value = '' if value is None else value
+        if name in ENCRYPTED_ELEMENTS and self._password:
+            value = self._decrypt(value)
+        if (vl := value.lower()) == 'true' or vl == 'false':
+            return value.lower() == 'true'
+        return value
+
+    def _getElement(self, name):
+        '''Get an Element by name from the root element'''
+        el = self._root.find(name)
+        if el is None:
+            raise ElementNotFound
+        return el
+
+    def _getElements(self, name):
+        '''Get Elements by name from the root element'''
+        return self._root.findall(name)
+
+    def _decrypt(self, crypted):
+        '''Decrypt AES-128-CBC encrypted values'''
+        iv = crypted[:16].encode()
+        key = hashlib.md5(self._password.encode()).digest()
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+
+        try:
+            decoded = base64.b64decode(crypted)
+            decrypted = unpad(cipher.decrypt(decoded), AES.block_size)
+        except ValueError:
+            raise PasswordError
+        return decrypted[16:len(decrypted)].decode()
+
+
+class SFDLFile(SFDLXML):
     def __init__(self, file, pw=None):
-        self.dom = xml.dom.minidom.parse(file)
-        self.__root = self.dom.getElementsByTagName('SFDLFile')[0]
+        self.dom = ET.parse(file)
+        super().__init__(self.dom, pw)
         self.__load(pw)
         self.packages = []
 
     def __setattr__(self, name, value):
         if name == 'password':
             self.__load(value)
-            super(SFDLFile, self).__setattr__('_SFDLFile__password', value)
+            super(SFDLFile, self).__setattr__('_SFDLFile_password', value)
         else:
             super(SFDLFile, self).__setattr__(name, value)
 
     def __load(self, pw):
-        self.__password = pw
-        self.version = self.__getElementValue('SFDLFileVersion')
-        self.encrypted = self.__getElementValue('Encrypted')
-        self.description = self.__getElementValue('Description')
-        self.uploader = self.__getElementValue('Uploader')
-        self.maxDownloadThreads = self.__getElementValue('MaxDownloadThreads')
-        self.connection_info = SFDLConnectionInfo(self.__root, self.__password)
+        self._password = pw
+        self.version = self._getElementValue('SFDLFileVersion')
+        self.encrypted = self._getElementValue('Encrypted')
+        self.description = self._getElementValue('Description')
+        self.uploader = self._getElementValue('Uploader')
+        self.maxDownloadThreads = self._getElementValue('MaxDownloadThreads')
+        self.connection_info = SFDLConnectionInfo(
+            self._getElement('ConnectionInfo'),
+            self._password
+        )
         self.packages = []
 
     def start_download(self):
@@ -58,29 +120,27 @@ class SFDLFile():
         #     size = ftp.download_dir(package.path)
         #     click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
 
-    def __getElementValue(self, name, root=None):
-        return SFDLUtils.getElementValue(
-            root or self.__root,
-            name, self.__password
-        )
 
-
-class SFDLConnectionInfo:
+class SFDLConnectionInfo(SFDLXML):
     def __init__(self, xmlElement, xmlPassword=None):
-        self.__root = SFDLUtils.getElement(xmlElement, 'ConnectionInfo')
-        self.__xmlPassword = xmlPassword
+        super().__init__(xmlElement, xmlPassword)
 
-        self.host = self.__getElementValue('Host')
-        self.port = self.__getElementValue('Port')
-        self.path = self.__getElementValue('Path')
-        self.username = self.__getElementValue('Username')
-        self.password = self.__getElementValue('Password')
-        self.dataType = self.__getElementValue('DataType')
-        self.listMethod = self.__getElementValue('ListMethod')
-        self.authRequired = self.__getElementValue('AuthRequired')
-        self.encryptionMode = self.__getElementValue('EncryptionMode')
-        self.characterEncoding = self.__getElementValue('CharacterEncoding')
-        self.dataConnectionType = self.__getElementValue('DataConnectionType')
+        self.host = self._getElementValue('Host')
+        self.port = self._getElementValue('Port')
+
+        try: # v9
+            self.path = self._getElementValue('DefaultPath')
+        except ElementNotFound: # v6
+            self.path = self._getElementValue('Path')
+
+        self.username = self._getElementValue('Username')
+        self.password = self._getElementValue('Password')
+        self.dataType = self._getElementValue('DataType')
+        self.listMethod = self._getElementValue('ListMethod')
+        self.authRequired = self._getElementValue('AuthRequired')
+        self.encryptionMode = self._getElementValue('EncryptionMode')
+        self.characterEncoding = self._getElementValue('CharacterEncoding')
+        self.dataConnectionType = self._getElementValue('DataConnectionType')
 
     def __str__(self):
         return 'ftp://%s:%s@%s:%s%s' % (
@@ -89,11 +149,6 @@ class SFDLConnectionInfo:
             self.host,
             self.port,
             self.path
-        )
-
-    def __getElementValue(self, name):
-        return SFDLUtils.getElementValue(
-            self.__root, name, self.__xmlPassword
         )
 
 

@@ -1,8 +1,7 @@
 import click
 
-from sfdlpy.xml import SFDLFile
+from sfdlpy.xml import (SFDLFile, PasswordError)
 from sfdlpy.utils import echo
-from sfdlpy.sfdl_utils import PasswordError
 
 
 class SFDLPYApp:
@@ -19,7 +18,7 @@ class SFDLPYApp:
                                          hide_input=True)
 
         try:
-            echo('Loaded SFDL File %s Version %s' % (sfdl.version, file.name))
+            echo('Loaded SFDL File Version %s %s' % (sfdl.version, file.name))
             echo('%s by %s' % (sfdl.description, sfdl.uploader))
             sfdl.start_download()
         except PasswordError:
