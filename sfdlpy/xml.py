@@ -3,35 +3,44 @@ import xml.dom.minidom
 import click
 
 from sfdlpy.ftp import (FTP, PingError)
-from sfdlpy.utils import echo
+from sfdlpy.utils import (echo, style)
 from sfdlpy.sfdl_utils import SFDLUtils
+
+from sfdlpy.geodata import get_iso_code
 
 
 class SFDLFile():
     def __init__(self, file, pw=None):
         self.dom = xml.dom.minidom.parse(file)
         self.__root = self.dom.getElementsByTagName('SFDLFile')[0]
-        self.__password = pw
+        self.__load(pw)
+        self.packages = []
 
+    def __setattr__(self, name, value):
+        if name == 'password':
+            self.__load(value)
+            super(SFDLFile, self).__setattr__('_SFDLFile__password', value)
+        else:
+            super(SFDLFile, self).__setattr__(name, value)
+
+    def __load(self, pw):
+        self.__password = pw
         self.version = self.__getElementValue('SFDLFileVersion')
         self.encrypted = self.__getElementValue('Encrypted')
         self.description = self.__getElementValue('Description')
         self.uploader = self.__getElementValue('Uploader')
         self.maxDownloadThreads = self.__getElementValue('MaxDownloadThreads')
-
-        self.connection_info = SFDLConnectionInfo(self.__root)
+        self.connection_info = SFDLConnectionInfo(self.__root, self.__password)
         self.packages = []
 
-    def __setattr__(self, name, value):
-        if name == 'password':
-            super(SFDLFile, self).__setattr__('_SFDLFile__password', value)
-        else:
-            super(SFDLFile, self).__setattr__(name, value)
-
     def start_download(self):
+        # TODO: Move this out of here, FTP downloads, output,
+        # nothing of this belongs here
         try:
             blink_host = click.style(self.connection_info.host, blink=True)
-            echo('Connecting to %s\r' % blink_host)
+            iso_code = get_iso_code(self.connection_info.host)
+            iso_txt = style(' in %s' % iso_code)
+            echo('Connecting to %s%s\r' % (blink_host, iso_txt))
 
             ftp = FTP(
                 self.connection_info.host,

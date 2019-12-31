@@ -9,6 +9,7 @@ python = "^3.8"
 Click = "7.0"
 ftputil = "3.4"
 pycryptodome = "3.9.4"
+geoip2 = "^3.0.0"
 
 [tool.poetry.dev-dependencies]
 

@@ -1,0 +1,1 @@
+https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=oDT3mn6iWIz68gu8&suffix=tar.gz
