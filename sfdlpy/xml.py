@@ -21,8 +21,13 @@ ENCRYPTED_ELEMENTS = [
     'DefaultPath',
     'Path',
     'Packagename',
+    'PackageName',
     'BulkFolderPath',
-    'PackageName'
+    'PackageName',
+    'FileName',
+    'FileFullPath',
+    'DirectoryRoot',
+    'DirectoryPath',
 ]
 
 
@@ -164,6 +169,10 @@ class SFDLPackage(SFDLXML):
             self.bulkFolderList = []
             for el in self._getElement('BulkFolderList').iter('BulkFolder'):
                 self.bulkFolderList.append(SFDLBulkFolder(el, self._password))
+        else:
+            self.fileList = []
+            for el in self._getElement('FileList').iter('FileInfo'):
+                self.fileList.append(SFDLFileInfo(el, self._password))
 
 class SFDLBulkFolder(SFDLXML):
     def __init__(self, xmlElement, xmlPassword=None):
@@ -171,3 +180,14 @@ class SFDLBulkFolder(SFDLXML):
 
         self.packageName = self._getElementValue('PackageName')
         self.path = self._getElementValue('BulkFolderPath')
+
+
+class SFDLFileInfo(SFDLXML):
+    def __init__(self, xmlElement, xmlPassword=None):
+        super().__init__(xmlElement, xmlPassword)
+        print(xmlPassword)
+        print(self._password)
+
+        self.name = self._getElementValue('FileName')
+        self.path = self._getElementValue('FileFullPath')
+        self.size = self._getElementValue('FileSize')
