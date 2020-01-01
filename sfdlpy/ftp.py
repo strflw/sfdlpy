@@ -6,9 +6,9 @@ import subprocess
 
 import ftputil
 import ftputil.session
-from click import (echo, style, progressbar)
+from click import progressbar
 
-from sfdlpy.utils import get_dl_speed
+from sfdlpy.utils import (style, get_dl_speed)
 
 
 class FTPError(Exception): pass  # noqa: E701
@@ -32,11 +32,15 @@ class FTP:  # noqa: E302
         return ftputil.FTPHost(self.host, self.username, self.password,
                                session_factory=self.__session)
 
-    def download_file(self, name):
+    def download_file(self, name, path=None):
         done = 0
-        size = self.connection.lstat(name).st_size
         start = time.time()
         laptime = 0
+
+        if path is not None:
+            self.connection.chdir(path)
+
+        size = self.connection.lstat(name).st_size
 
         def show_item(bla):
             nonlocal laptime
@@ -52,29 +56,29 @@ class FTP:  # noqa: E302
                 bar.update(size)
             return download_cb
 
-        label = style('Loading %s:' % name,
-                      bg='black', fg='green', blink=True)
-        with progressbar(label=label, length=size,
+        template = style('Loading: %(label)s [%(bar)s] %(info)s')
+        with progressbar(label=name, length=size, bar_template=template,
                          show_pos=True, item_show_func=show_item) as bar:
             self.connection.download(name, name, download_cb_maker(bar))
         return done
 
     def download_dir(self, path):
         size = 0
-        echo('CHDIR %s' % path)
         self.connection.chdir(path)
         names = self.connection.listdir(self.connection.curdir)
+        self._chdir(os.path.basename(path))
         for name in names:
             if self.connection.path.isfile(name):
                 size += self.download_file(name)
             elif self.connection.path.isdir(name):
-                try:
-                    os.mkdir(name)
-                except FileExistsError:
-                    pass
-                os.chdir(name)
+                self._chdir(name)
                 size += self.download_dir('/'.join([path, name]))
         return size
+
+    def _chdir(self, name):
+        try: os.mkdir(name) # noqa
+        except FileExistsError: pass # noqa
+        os.chdir(name)
 
     def _ping(self):
         param = '-n' if platform.system().lower() == 'windows' else '-c'

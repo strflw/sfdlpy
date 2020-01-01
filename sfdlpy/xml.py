@@ -29,9 +29,18 @@ ENCRYPTED_ELEMENTS = [
 
 class ElementNotFound(Exception): pass  # noqa: E701
 class PasswordError(Exception): pass  # noqa: E701
-class SFDLXML():
+class SFDLXML(): # noqa: E302
     def __init__(self, el, pw):
         self._root = el
+        self._password = pw
+
+    def __setattr__(self, name, value):
+        if name == 'xmlPassword':
+            self._load(value)
+        else:
+            super(SFDLXML, self).__setattr__(name, value)
+
+    def _load(self, pw):
         self._password = pw
 
     def _getElementValue(self, name):
@@ -40,7 +49,7 @@ class SFDLXML():
         value = '' if value is None else value
         if name in ENCRYPTED_ELEMENTS and self._password:
             value = self._decrypt(value)
-        if (vl := value.lower()) == 'true' or vl == 'false':
+        if (vl:=value.lower()) == 'true' or vl == 'false':
             return value.lower() == 'true'
         return value
 
@@ -73,17 +82,10 @@ class SFDLFile(SFDLXML):
     def __init__(self, file, pw=None):
         self.dom = ET.parse(file)
         super().__init__(self.dom, pw)
-        self.__load(pw)
+        self._load(pw)
 
-    def __setattr__(self, name, value):
-        if name == 'password':
-            self.__load(value)
-            super(SFDLFile, self).__setattr__('_SFDLFile_password', value)
-        else:
-            super(SFDLFile, self).__setattr__(name, value)
-
-    def __load(self, pw):
-        self._password = pw
+    def _load(self, pw):
+        super()._load(pw)
         self.version = self._getElementValue('SFDLFileVersion')
         self.encrypted = self._getElementValue('Encrypted')
         self.description = self._getElementValue('Description')
@@ -105,9 +107,9 @@ class SFDLConnectionInfo(SFDLXML):
         self.host = self._getElementValue('Host')
         self.port = self._getElementValue('Port')
 
-        try: # v9
+        try:  # v9
             self.path = self._getElementValue('DefaultPath')
-        except ElementNotFound: # v6
+        except ElementNotFound:  # v6
             self.path = self._getElementValue('Path')
 
         self.username = self._getElementValue('Username')
@@ -145,6 +147,7 @@ class SFDLPackage(SFDLXML):
             for el in self._getElement('FileList').iter('FileInfo'):
                 self.fileList.append(SFDLFileInfo(el, self._password))
 
+
 class SFDLBulkFolder(SFDLXML):
     def __init__(self, xmlElement, xmlPassword=None):
         super().__init__(xmlElement, xmlPassword)
@@ -156,9 +159,8 @@ class SFDLBulkFolder(SFDLXML):
 class SFDLFileInfo(SFDLXML):
     def __init__(self, xmlElement, xmlPassword=None):
         super().__init__(xmlElement, xmlPassword)
-        print(xmlPassword)
-        print(self._password)
 
+        self.dir = self._getElementValue('DirectoryPath')
         self.name = self._getElementValue('FileName')
         self.path = self._getElementValue('FileFullPath')
         self.size = self._getElementValue('FileSize')

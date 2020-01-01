@@ -25,22 +25,30 @@ def style(v, **kwargs):
     return click.style(v, **kwargs)
 
 
-def __flush(formatter=formatter):
-    formatter.buffer = []
-
-
 def get_dl_speed(time, size):  # size in bytes plz
-    unit = 'B'
-    if size >= 1024:
-        unit = 'kB'
-        size = size / 1024
-        if size >= 1024:
-            unit = 'mB'
-            size = size / 1024
     speed = round(size / time)
-    return '%i%s/s' % (speed, unit)
+    return '%.2f%s/s' % _transform_size(speed)
 
 
 def get_speedreport(time, size):  # size in bytes plz
     speed = get_dl_speed(time, size)
-    return 'Loaded %ibytes in %is. Speed: %s' % (size, time, speed)
+    size, unit = _transform_size(size)
+    return 'Loaded %.2f %s in %.2fs. Speed: %s' % (size, unit, time, speed)
+
+
+def __flush(formatter=formatter):
+    formatter.buffer = []
+
+
+def _transform_size(size):
+    unit = 'B'
+    if size >= 1024:
+        unit = 'KB'
+        size = size / 1024
+        if size >= 1024:
+            unit = 'MB'
+            size = size / 1024
+            if size >= 1024:
+                unit = 'GB'
+                size = size / 1024
+    return (size, unit)

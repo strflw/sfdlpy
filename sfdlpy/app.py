@@ -16,17 +16,17 @@ class SFDLPYApp:
     def load_from_file(self, file, pw=None, output=None):
         click.clear()
 
-        self.__file = sfdl = SFDLFile(file, pw=pw)
-        if sfdl.encrypted and not pw:
-            sfdl.password = click.prompt('Password is required',
-                                         hide_input=True)
-
         try:
+            self.__file = sfdl = SFDLFile(file, pw=pw)
+            if sfdl.encrypted and not pw:
+                sfdl.xmlPassword = click.prompt(style('Password is required'),
+                                                hide_input=True)
+
             echo('Loaded SFDL File Version %s %s' % (sfdl.version, file.name))
             echo('%s by %s' % (sfdl.description, sfdl.uploader))
             self._start_download()
         except PasswordError:
-            click.echo('Wrong Password!', err=True)
+            click.echo(style('Wrong Password!'), err=True)
             exit(1)
 
     def _start_download(self):
@@ -48,11 +48,22 @@ class SFDLPYApp:
             echo('No Response! Server offline?')
             exit(2)
 
-        for package in self.packages:
-             start = time.time()
-             size = ftp.download_dir(package.path)
-             click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
+        ftp._chdir(self.__output)
+        for package in sfdl.packages:
+            start = time.time()
+            size = 0
 
+            if package.bulkFolderMode:
+                for folder in package.bulkFolderList:
+                    echo('Loading BulkFolder %s' % folder.path)
+                    size += ftp.download_dir(folder.path)
+            else:
+                echo('Loading FileList')
+                for file in package.fileList:
+                    echo('%s' % file.path)
+                    size += ftp.download_file(file.name, path=file.dir)
+
+            echo(get_speedreport(time.time() - start, size))
 
     def create_file(self, host, user, password, port, path):
         '''Simple program to create a SFDL File'''

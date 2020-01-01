@@ -10,6 +10,7 @@ A CLI Tool to handle [SFDL Files](https://sfdl.net/). It can create them and rea
 * click 7.0
 * ftputil 3.4
 * pycryptodome 3.9.4
+* geoip2 3.0.0
 
 # Installation
 
@@ -20,7 +21,7 @@ A CLI Tool to handle [SFDL Files](https://sfdl.net/). It can create them and rea
 # Usage
 
 ```
-❯ sfdlpy --help                                                                                                                                        ~/c/sfdlpy master
+❯ sfdlpy --help
 Usage: sfdlpy [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -55,7 +56,7 @@ Options:
 ### Usage
 
 ```
-❯ sfdlpy create-with --help                                                                                                                            ~/c/sfdlpy master
+❯ sfdlpy create-with --help
 Usage: sfdlpy create-with [OPTIONS]
 
   Create SFDL with passed data
@@ -73,7 +74,7 @@ Options:
 
 ### Usage
 ```
-❯ sfdlpy load --help                                                                                                                                   ~/c/sfdlpy master
+❯ sfdlpy load --help
 Usage: sfdlpy load [OPTIONS] FILE
 
   Download a SFDL File.

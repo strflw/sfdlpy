@@ -5,9 +5,12 @@ from sfdlpy.app import (SFDLPYApp, pass_app)
 
 
 @click.group()
+@click.option('-o', '--output', help='The output directory.', default='.',
+              type=click.Path(exists=True, file_okay=False,
+                              writable=True, resolve_path=True))
 @click.pass_context
-def main(ctx):
-    ctx.obj = SFDLPYApp()
+def main(ctx, output):
+    ctx.obj = SFDLPYApp(output=output)
 
 
 @main.command()
@@ -35,9 +38,6 @@ def create_with(app, host, user, password, port, path):
 
 
 @main.command()
-@click.option('-o', '--output', help='The output directory.', default='.',
-              type=click.Path(exists=True, file_okay=False,
-                              writable=True, resolve_path=True))
 @click.option('-p', '--password', help='Password for decryption.')
 @click.argument('FILE', type=click.File('r'))
 @pass_app
