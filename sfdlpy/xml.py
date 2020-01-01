@@ -7,10 +7,6 @@ import click
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-from sfdlpy.ftp import (FTP, PingError)
-from sfdlpy.utils import (echo, style)
-from sfdlpy.geodata import get_iso_code
-
 
 ENCRYPTED_ELEMENTS = [
     'Description',
@@ -100,31 +96,6 @@ class SFDLFile(SFDLXML):
         self.packages = []
         for element in self._getElement('Packages').iter('SFDLPackage'):
             self.packages.append(SFDLPackage(element, self._password))
-
-    def start_download(self):
-        # TODO: Move this out of here, FTP downloads, output,
-        # nothing of this belongs here
-        try:
-            blink_host = click.style(self.connection_info.host, blink=True)
-            iso_code = get_iso_code(self.connection_info.host)
-            iso_txt = style(' in %s' % iso_code)
-            echo('Connecting to %s%s\r' % (blink_host, iso_txt))
-
-            ftp = FTP(
-                self.connection_info.host,
-                username=self.connection_info.username,
-                password=self.connection_info.password,
-                port=self.connection_info.port
-            )
-            echo('Connected!')
-        except PingError:
-            echo('No Response! Server offline?')
-            exit(2)
-
-        # for package in self.packages:
-        #     start = time.time()
-        #     size = ftp.download_dir(package.path)
-        #     click.echo(SFDLUtils.get_speedreport(time.time() - start, size))
 
 
 class SFDLConnectionInfo(SFDLXML):
