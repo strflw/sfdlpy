@@ -73,7 +73,6 @@ class SFDLFile(SFDLXML):
         self.dom = ET.parse(file)
         super().__init__(self.dom, pw)
         self.__load(pw)
-        self.packages = []
 
     def __setattr__(self, name, value):
         if name == 'password':
@@ -94,6 +93,8 @@ class SFDLFile(SFDLXML):
             self._password
         )
         self.packages = []
+        for element in self._getElement('Packages').iter('SFDLPackage'):
+            self.packages.append(SFDLPackage(element, self._password))
 
     def start_download(self):
         # TODO: Move this out of here, FTP downloads, output,
@@ -152,5 +153,21 @@ class SFDLConnectionInfo(SFDLXML):
         )
 
 
-class SFDLPackage:
-    pass
+class SFDLPackage(SFDLXML):
+    def __init__(self, xmlElement, xmlPassword=None):
+        super().__init__(xmlElement, xmlPassword)
+
+        self.name = self._getElementValue('Packagename')
+        self.bulkFolderMode = self._getElementValue('BulkFolderMode')
+
+        if self.bulkFolderMode:
+            self.bulkFolderList = []
+            for el in self._getElement('BulkFolderList').iter('BulkFolder'):
+                self.bulkFolderList.append(SFDLBulkFolder(el, self._password))
+
+class SFDLBulkFolder(SFDLXML):
+    def __init__(self, xmlElement, xmlPassword=None):
+        super().__init__(xmlElement, xmlPassword)
+
+        self.packageName = self._getElementValue('PackageName')
+        self.path = self._getElementValue('BulkFolderPath')
