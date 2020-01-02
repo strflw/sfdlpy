@@ -129,4 +129,4 @@ dmypy.json
 
 .todo
 
-data/geodata.db
+data/geodata.mmdb
