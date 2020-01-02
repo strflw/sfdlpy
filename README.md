@@ -20,6 +20,9 @@ A CLI Tool to handle [SFDL Files](https://sfdl.net/). It can create them and rea
 
 # Usage
 
+Note: On first usage it might take a while until something happens. That's
+because sfdlpy downloads the geodata on initial run.
+
 ```
 ❯ sfdlpy --help
 Usage: sfdlpy [OPTIONS] COMMAND [ARGS]...
